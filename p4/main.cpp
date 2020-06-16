@@ -41,6 +41,7 @@ struct Node {
 };
 
 void mstDriver(vector<Vertex> &vertices);
+void fastDriver(vector<Vertex> &vertices);
 double distance(Node &left, Node &right);
 
 int main(int argc, char *argv[]) {
@@ -101,6 +102,7 @@ int main(int argc, char *argv[]) {
         mstDriver(vertices);
         break;
     case 'b':
+        fastDriver(vertices);
         break;
     case 'c':
         break;
@@ -129,10 +131,10 @@ void mstDriver(vector<Vertex> &vertices) {
         adjmat.push_back(Node(&vertices[i]));
     }
 
-    /*if (coastCount == 0 && landCount > 0 && seaCount > 0) {
+    if (coastCount == 0 && landCount > 0 && seaCount > 0) {
         cerr << "Cannot construct MST!";
         exit(1);
-    }*/
+    }
 
     size_t numTrue = 0;
     adjmat[0].maxDist = 0;
@@ -142,7 +144,7 @@ void mstDriver(vector<Vertex> &vertices) {
         for (size_t i = 0; i < vertices.size(); ++i) {
             if (adjmat[i].isVisited == false) {
                 if (adjmat[shortest].maxDist > adjmat[i].maxDist || 
-                    (adjmat[shortest].maxDist == 0 && adjmat[i].maxDist != numeric_limits<double>::infinity()))
+                    (shortest == 0 && adjmat[i].maxDist != numeric_limits<double>::infinity()))
                     shortest = i;
             }
         } // first for
@@ -171,4 +173,8 @@ void mstDriver(vector<Vertex> &vertices) {
     for (int i = 1; i < static_cast<int>(adjmat.size()); ++i) {
         cout << min(i, adjmat[i].pred) << " " << max(i, adjmat[i].pred) << "\n";
     }
+}
+
+void fastDriver(vector<Vertex> &vertices) {
+
 }
