@@ -35,14 +35,15 @@ struct Node {
     Vertex *vert;
     double maxDist = numeric_limits<double>::infinity();
     int pred;
-    bool isVisited = false;
+    int isVisited = 0;
 
     Node(Vertex *vert) : vert(vert) {}
 };
 
 void mstDriver(vector<Vertex> &vertices);
 void fastDriver(vector<Vertex> &vertices);
-double distance(Node &left, Node &right);
+double distance(Vertex *left, Vertex *right);
+double distance2(Vertex &left, Vertex &right);
 
 int main(int argc, char *argv[]) {
     std::ios_base::sync_with_stdio(false);
@@ -113,11 +114,16 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-double distance(Node &left, Node &right) {
-    if ((left.vert->type == Sea && right.vert->type == Land) || (right.vert->type == Sea && left.vert->type == Land))
+double distance(Vertex *left, Vertex *right) {
+    if ((left->type == Sea && right->type == Land) || (right->type == Sea && left->type == Land))
         return numeric_limits<double>::infinity();
-    return pow(static_cast<double>(left.vert->x - right.vert->x), 2)
-        + pow(static_cast<double>(left.vert->y - right.vert->y), 2);
+    return pow(static_cast<double>(left->x - right->x), 2)
+        + pow(static_cast<double>(left->y - right->y), 2);
+}
+
+double distance2(Vertex &left, Vertex &right) {
+    return pow(static_cast<double>(left.x - right.x), 2)
+        + pow(static_cast<double>(left.y - right.y), 2);
 }
 
 void mstDriver(vector<Vertex> &vertices) {
@@ -153,7 +159,7 @@ void mstDriver(vector<Vertex> &vertices) {
 
         for (size_t i = 0; i < vertices.size(); ++i) {
             if (adjmat[i].isVisited == false) {
-                double dist = distance(adjmat[shortest], adjmat[i]); // Since I'm doing it with a variable, maybe sqrt is okay?
+                double dist = distance(adjmat[shortest].vert, adjmat[i].vert); // Since I'm doing it with a variable, maybe sqrt is okay?
                 if (adjmat[i].maxDist > dist) {
                     adjmat[i].maxDist = dist;
                     adjmat[i].pred = static_cast<int>(shortest);
@@ -176,5 +182,44 @@ void mstDriver(vector<Vertex> &vertices) {
 }
 
 void fastDriver(vector<Vertex> &vertices) {
+    vector<int> path;
+    path.reserve(vertices.size());
+    path.push_back(0);
+    path.push_back(1);
 
+    vector<int> outs;
+    outs.reserve(vertices.size());
+
+    for (size_t i = 2; i < vertices.size(); ++i) {
+        outs.push_back(static_cast<int>(i));
+    }
+
+    while (path.size() < vertices.size()) {
+        size_t addSpot;
+        double minDist = numeric_limits<double>::infinity();
+        int newBoi;
+        for (size_t k = 0; k < path.size() - 1; ++k) {
+            double newDist = distance2(vertices[path[k]], vertices[outs.back()]) + distance2(vertices[path[k + 1]], vertices[outs.back()])
+                - distance2(vertices[path[k]], vertices[path[k + 1]]);
+            if (newDist < minDist) {
+                minDist = newDist;
+                addSpot = k + 1;
+                newBoi = outs.back();
+            }
+        }
+        path.insert(path.begin() + addSpot, newBoi);
+        outs.pop_back();
+    }
+
+    double totDist = 0;
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        totDist += sqrt(distance2(vertices[path[i]], vertices[path[i+1]]));
+    }
+
+    totDist += sqrt(distance2(vertices[path.front()], vertices[path.back()]));
+
+    cout << totDist << "\n";
+    for (size_t i = 0; i < path.size(); ++i) {
+        cout << path[i] << " ";
+    }
 }
