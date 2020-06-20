@@ -40,8 +40,25 @@ struct Node {
     Node(Vertex *vert) : vert(vert) {}
 };
 
+struct OptiTSP {
+    vector<int> currPath;
+    vector<int> bestPath;
+    double currDist = 0;
+    double bestDist = 0;
+
+    OptiTSP() {}
+
+    OptiTSP(size_t numVerts) {
+        currPath.reserve(numVerts);
+        bestPath.reserve(numVerts);
+    }
+
+};
+
 void mstDriver(vector<Vertex> &vertices);
 void fastDriver(vector<Vertex> &vertices);
+double fastTSP(vector<Vertex> &vertices, vector<int> &path);
+void optiDriver(vector<Vertex> &vertices);
 double distance(Vertex *left, Vertex *right);
 double distance2(Vertex &left, Vertex &right);
 
@@ -106,6 +123,7 @@ int main(int argc, char *argv[]) {
         fastDriver(vertices);
         break;
     case 'c':
+        optiDriver(vertices);
         break;
     default:
         break;
@@ -113,6 +131,88 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+
+bool promising(vector<Vertex> &vertices, OptiTSP &sol, size_t permLength) {
+
+    if (vertices.size() - permLength < 4) return true; // Suppoesd to save work or whatever
+
+    vector<Node> adjmat;
+    // Need to figure out which nodes to put in here
+    for (size_t i = permLength; i < vertices.size(); ++i) {
+        adjmat.push_back(Node(&vertices[sol.currPath[i]]));
+    }
+
+    size_t numTrue = 0;
+    adjmat[0].maxDist = 0;
+
+    while (numTrue++ < vertices.size() - permLength) {
+        size_t shortest = 0;
+        for (size_t i = 0; i < vertices.size() - permLength; ++i) {
+            if (adjmat[i].isVisited == false) {
+                if (adjmat[shortest].maxDist > adjmat[i].maxDist ||
+                    (shortest == 0 && adjmat[i].maxDist != numeric_limits<double>::infinity()))
+                    shortest = i;
+            }
+        } // first for
+
+        adjmat[shortest].isVisited = true;
+
+        for (size_t i = 0; i < vertices.size() - permLength; ++i) {
+            if (adjmat[i].isVisited == false) {
+                double dist = distance2(*adjmat[shortest].vert, *adjmat[i].vert);
+                if (adjmat[i].maxDist > dist) {
+                    adjmat[i].maxDist = dist;
+                    adjmat[i].pred = static_cast<int>(shortest);
+                }
+            }
+        } // second for
+    } // while
+
+    double totDist = 0;
+
+    for (size_t i = 0; i < adjmat.size(); ++i) {
+        totDist += sqrt(adjmat[i].maxDist);
+    }
+    
+    // ad le arms
+    double dist1 = numeric_limits<double>::infinity();
+    for (size_t i = 0; i < adjmat.size(); ++i) {
+        double newDist = distance2(vertices[sol.currPath[0]], *adjmat[i].vert);
+        if (newDist < dist1) dist1 = newDist;
+    }
+    totDist += sqrt(dist1);
+
+    double dist2 = numeric_limits<double>::infinity();
+    for (size_t i = 0; i < adjmat.size(); ++i) {
+        double newDist = distance2(vertices[sol.currPath[permLength]], *adjmat[i].vert);
+        if (newDist < dist2) dist2 = newDist;
+    }
+    totDist += sqrt(dist2);
+
+    if (totDist + sol.currDist < sol.bestDist) {
+        return true;
+    }
+
+    return false;
+} // PROMISING
+
+void genPerms(vector<Vertex> &vertices, OptiTSP &sol, size_t permLength) {
+    if (permLength == sol.currPath.size()) {
+        if (promising(vertices, sol, permLength)) {
+            sol.bestPath = sol.currPath;
+            sol.bestDist = sol.currDist;
+        }
+        return;
+    } // if
+    if (!promising(vertices, sol, permLength)) return;
+    for (size_t i = permLength; i < sol.currPath.size(); ++i) {
+        swap(sol.currPath[permLength], sol.currPath[i]);
+        sol.currDist += sqrt(distance2(vertices[sol.currPath[permLength]], vertices[sol.currPath[permLength - 1]]));
+        genPerms(vertices, sol, permLength + 1);
+        sol.currDist -= sqrt(distance2(vertices[sol.currPath[permLength]], vertices[sol.currPath[permLength - 1]]));
+        swap(sol.currPath[permLength], sol.currPath[i]);
+    } // for
+} // genPerms()
 
 double distance(Vertex *left, Vertex *right) {
     if ((left->type == Sea && right->type == Land) || (right->type == Sea && left->type == Land))
@@ -184,6 +284,32 @@ void mstDriver(vector<Vertex> &vertices) {
 void fastDriver(vector<Vertex> &vertices) {
     vector<int> path;
     path.reserve(vertices.size());
+    double totDist = fastTSP(vertices, path);
+
+    cout << totDist << "\n";
+    for (size_t i = 0; i < path.size(); ++i) {
+        cout << path[i] << " ";
+    }
+}
+
+void optiDriver(vector<Vertex> &vertices) {
+    OptiTSP sol(vertices.size());
+     
+    // Hit em with the FASTTSP real quick
+    sol.bestDist = fastTSP(vertices, sol.bestPath);
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        sol.currPath.push_back(static_cast<int>(i));
+    }
+
+    genPerms(vertices, sol, 1);
+
+    cout << sol.bestDist << "\n";
+    for (size_t i = 0; i < sol.bestPath.size(); ++i) {
+        cout << sol.bestPath[i] << " ";
+    }
+}
+
+double fastTSP(vector<Vertex> &vertices, vector<int> &path) {
     path.push_back(0);
     path.push_back(1);
 
@@ -213,13 +339,10 @@ void fastDriver(vector<Vertex> &vertices) {
 
     double totDist = 0;
     for (size_t i = 0; i < path.size() - 1; ++i) {
-        totDist += sqrt(distance2(vertices[path[i]], vertices[path[i+1]]));
+        totDist += sqrt(distance2(vertices[path[i]], vertices[path[i + 1]]));
     }
 
     totDist += sqrt(distance2(vertices[path.front()], vertices[path.back()]));
 
-    cout << totDist << "\n";
-    for (size_t i = 0; i < path.size(); ++i) {
-        cout << path[i] << " ";
-    }
+    return totDist;
 }
