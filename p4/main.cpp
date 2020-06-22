@@ -234,8 +234,8 @@ double distance(Vertex *left, Vertex *right) {
 }
 
 double distance2(Vertex &left, Vertex &right) {
-    return pow(static_cast<double>(left.x - right.x), 2)
-        + pow(static_cast<double>(left.y - right.y), 2);
+    return static_cast<double>((left.x - right.x))*static_cast<double>((left.x - right.x))
+        + static_cast<double>((left.y - right.y))*static_cast<double>((left.y - right.y));
 }
 
 void mstDriver(vector<Vertex> &vertices) {
@@ -338,8 +338,8 @@ double fastTSP(vector<Vertex> &vertices, vector<int> &path) {
         double minDist = numeric_limits<double>::infinity();
         int newBoi;
         for (size_t k = 0; k < path.size() - 1; ++k) {
-            double newDist = distance2(vertices[path[k]], vertices[outs.back()]) + distance2(vertices[path[k + 1]], vertices[outs.back()])
-                - distance2(vertices[path[k]], vertices[path[k + 1]]);
+            double newDist = sqrt(distance2(vertices[path[k]], vertices[outs.back()])) + sqrt(distance2(vertices[path[k + 1]], vertices[outs.back()]))
+                - sqrt(distance2(vertices[path[k]], vertices[path[k + 1]]));
             if (newDist < minDist) {
                 minDist = newDist;
                 addSpot = k + 1;
