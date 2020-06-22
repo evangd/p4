@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 
 bool promising(vector<Vertex> &vertices, OptiTSP &sol, size_t permLength) {
 
-    if (vertices.size() - permLength < 4) return true; // Suppoesd to save work or whatever
+    if (vertices.size() - permLength <= 4) return true; // Supposed to save work or whatever
 
     vector<Node> adjmat;
     // Need to figure out which nodes to put in here
@@ -174,20 +174,29 @@ bool promising(vector<Vertex> &vertices, OptiTSP &sol, size_t permLength) {
         totDist += sqrt(adjmat[i].maxDist);
     }
     
+    /* Here's a little debugging thing
+    cout << totDist << "\n";
+
+    for (int i = 1; i < static_cast<int>(adjmat.size()); ++i) {
+        cout << min(i, adjmat[i].pred) << " " << max(i, adjmat[i].pred) << "\n";
+    }*/
+
     // ad le arms
     double dist1 = numeric_limits<double>::infinity();
     for (size_t i = 0; i < adjmat.size(); ++i) {
-        double newDist = distance2(vertices[sol.currPath[0]], *adjmat[i].vert);
+        double newDist = distance2(vertices[0], *adjmat[i].vert);
         if (newDist < dist1) dist1 = newDist;
     }
     totDist += sqrt(dist1);
 
     double dist2 = numeric_limits<double>::infinity();
     for (size_t i = 0; i < adjmat.size(); ++i) {
-        double newDist = distance2(vertices[sol.currPath[permLength]], *adjmat[i].vert);
+        double newDist = distance2(vertices[sol.currPath[permLength - 1]], *adjmat[i].vert);
         if (newDist < dist2) dist2 = newDist;
     }
     totDist += sqrt(dist2);
+
+    //cout << setw(5) << permLength << setw(10) << sol.currPath.size() << setw(10) << sqrt(dist1) << setw(10) << sqrt(dist2) << setw(10) << totDist - sqrt(dist1) - sqrt(dist2) << '\n';
 
     if (totDist + sol.currDist < sol.bestDist) {
         return true;
@@ -198,10 +207,13 @@ bool promising(vector<Vertex> &vertices, OptiTSP &sol, size_t permLength) {
 
 void genPerms(vector<Vertex> &vertices, OptiTSP &sol, size_t permLength) {
     if (permLength == sol.currPath.size()) {
-        if (promising(vertices, sol, permLength)) {
+        double lastLink = sqrt(distance2(vertices[sol.currPath.front()], vertices[sol.currPath.back()]));
+        sol.currDist += lastLink;
+        if (sol.currDist < sol.bestDist) {
             sol.bestPath = sol.currPath;
             sol.bestDist = sol.currDist;
         }
+        sol.currDist -= lastLink;
         return;
     } // if
     if (!promising(vertices, sol, permLength)) return;
@@ -297,9 +309,10 @@ void optiDriver(vector<Vertex> &vertices) {
      
     // Hit em with the FASTTSP real quick
     sol.bestDist = fastTSP(vertices, sol.bestPath);
-    for (size_t i = 0; i < vertices.size(); ++i) {
+    /*for (size_t i = 0; i < vertices.size(); ++i) {
         sol.currPath.push_back(static_cast<int>(i));
-    }
+    }*/
+    sol.currPath = sol.bestPath;
 
     genPerms(vertices, sol, 1);
 
